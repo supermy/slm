@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>视频播放页面</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .controls {
+            text-align: center;
+            margin: 10px 0;
+        }
+        .play-all-btn {
+            background-color: #4CAF50;
+            color: white;
+            padding: 8px 16px;
+            font-size: 14px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .play-all-btn:hover {
+            background-color: #45a049;
+        }
+        .video-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .video-item {
+            background-color: white;
+            border-radius: 4px;
+            padding: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .video-item h2 {
+            font-size: 12px;
+            margin-top: 0;
+            margin-bottom: 6px;
+            color: #555;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        video {
+            width: 100%;
+            height: auto;
+            max-height: 200px;
+            object-fit: contain;
+            border-radius: 4px;
+        }
+        @media (max-width: 1200px) {
+            .video-container {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        @media (max-width: 768px) {
+            .video-container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>视频播放页面</h1>
+    <div class="controls">
+        <button class="play-all-btn" onclick="playAllVideos()">一键同时播放</button>
+    </div>
+    <div class="video-container">
+        <div class="video-item">
+            <h2>tetris-glm4.7-nothink.mov</h2>
+            <video id="video1" controls>
+                <source src="tetris-glm4.7-nothink.mov" type="video/quicktime">
+                您的浏览器不支持视频播放
+            </video>
+        </div>
+        <div class="video-item">
+            <h2>tetris-glm4.7-think.mov</h2>
+            <video id="video2" controls>
+                <source src="tetris-glm4.7-think.mov" type="video/quicktime">
+                您的浏览器不支持视频播放
+            </video>
+        </div>
+        <div class="video-item">
+            <h2>tetris-qwen35-35a3b-q5kxl-nothink.mov</h2>
+            <video id="video3" controls>
+                <source src="tetris-qwen35-35a3b-q5kxl-nothink.mov" type="video/quicktime">
+                您的浏览器不支持视频播放
+            </video>
+        </div>
+        <div class="video-item">
+            <h2>tetris-qwen35-35a3b-q5kxl-think.mov</h2>
+            <video id="video4" controls>
+                <source src="tetris-qwen35-35a3b-q5kxl-think.mov" type="video/quicktime">
+                您的浏览器不支持视频播放
+            </video>
+        </div>
+        <div class="video-item">
+            <h2>tetris-qwen35-4b.mov</h2>
+            <video id="video5" controls>
+                <source src="tetris-qwen35-4b.mov" type="video/quicktime">
+                您的浏览器不支持视频播放
+            </video>
+        </div>
+        <div class="video-item">
+            <h2>tetris-qwen35-9b.mov</h2>
+            <video id="video6" controls>
+                <source src="tetris-qwen35-9b.mov" type="video/quicktime">
+                您的浏览器不支持视频播放
+            </video>
+        </div>
+    </div>
+    <script>
+        function playAllVideos() {
+            const videos = document.querySelectorAll('video');
+            videos.forEach(video => {
+                video.play();
+            });
+        }
+    </script>
+</body>
+</html>
