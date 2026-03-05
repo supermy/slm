@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>华容道 - 经典益智游戏</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        h1 {
+            color: #fff;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .game-info {
+            color: #fff;
+            margin-bottom: 20px;
+            font-size: 18px;
+        }
+        
+        .game-container {
+            background: #8B4513;
+            padding: 10px;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        
+        .board {
+            width: 400px;
+            height: 500px;
+            background: #D2691E;
+            position: relative;
+            border: 3px solid #5D3A1A;
+            border-radius: 5px;
+        }
+        
+        .piece {
+            position: absolute;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 16px;
+            color: #fff;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+            box-shadow: inset 0 2px 5px rgba(255,255,255,0.3), 0 3px 5px rgba(0,0,0,0.3);
+            border: 2px solid rgba(0,0,0,0.2);
+        }
+        
+        .piece:hover {
+            transform: scale(1.02);
+            box-shadow: inset 0 2px 5px rgba(255,255,255,0.4), 0 5px 10px rgba(0,0,0,0.4);
+        }
+        
+        .piece.cao {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            width: 200px;
+            height: 200px;
+            font-size: 24px;
+        }
+        
+        .piece.guan {
+            background: linear-gradient(135deg, #27ae60, #1e8449);
+            width: 200px;
+            height: 100px;
+        }
+        
+        .piece.zhang {
+            background: linear-gradient(135deg, #2980b9, #1a5276);
+            width: 100px;
+            height: 200px;
+        }
+        
+        .piece.zhao {
+            background: linear-gradient(135deg, #8e44ad, #6c3483);
+            width: 100px;
+            height: 200px;
+        }
+        
+        .piece.ma {
+            background: linear-gradient(135deg, #d35400, #a04000);
+            width: 100px;
+            height: 200px;
+        }
+        
+        .piece.huang {
+            background: linear-gradient(135deg, #f39c12, #d68910);
+            width: 100px;
+            height: 200px;
+        }
+        
+        .piece.soldier {
+            background: linear-gradient(135deg, #7f8c8d, #5d6d7e);
+            width: 100px;
+            height: 100px;
+        }
+        
+        .exit-zone {
+            position: absolute;
+            bottom: 0;
+            left: 100px;
+            width: 200px;
+            height: 10px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 5px;
+        }
+        
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        
+        button {
+            padding: 12px 24px;
+            font-size: 16px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+        
+        .btn-secondary {
+            background: #fff;
+            color: #667eea;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        
+        .victory-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .victory-content {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            color: white;
+            animation: popIn 0.5s ease;
+        }
+        
+        @keyframes popIn {
+            0% { transform: scale(0.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        
+        .victory-content h2 {
+            font-size: 36px;
+            margin-bottom: 20px;
+        }
+        
+        .moves-display {
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        
+        @media (max-width: 480px) {
+            .board {
+                width: 320px;
+                height: 400px;
+            }
+            
+            .piece.cao {
+                width: 160px;
+                height: 160px;
+                font-size: 20px;
+            }
+            
+            .piece.guan {
+                width: 160px;
+                height: 80px;
+            }
+            
+            .piece.zhang, .piece.zhao, .piece.ma, .piece.huang {
+                width: 80px;
+                height: 160px;
+            }
+            
+            .piece.soldier {
+                width: 80px;
+                height: 80px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>华容道</h1>
+    <div class="game-info">
+        <span>步数: <span id="moves">0</span></span>
+    </div>
+    
+    <div class="game-container">
+        <div class="board" id="board">
+            <div class="exit-zone"></div>
+        </div>
+    </div>
+    
+    <div class="controls">
+        <button class="btn-primary" onclick="resetGame()">重新开始</button>
+        <button class="btn-secondary" onclick="showRules()">游戏规则</button>
+    </div>
+    
+    <div class="victory-modal" id="victoryModal">
+        <div class="victory-content">
+            <h2>恭喜过关!</h2>
+            <div class="moves-display">用了 <span id="finalMoves">0</span> 步</div>
+            <button class="btn-primary" onclick="resetGame()">再玩一次</button>
+        </div>
+    </div>
+
+    <script>
+        const CELL_SIZE = 100;
+        const BOARD_WIDTH = 4;
+        const BOARD_HEIGHT = 5;
+        
+        let pieces = [];
+        let moves = 0;
+        let selectedPiece = null;
+        let isDragging = false;
+        let dragStartX, dragStartY;
+        let pieceStartX, pieceStartY;
+        
+        // 初始布局 (横刀立马)
+        const initialLayout = [
+            { id: 'cao', type: 'cao', x: 1, y: 0, w: 2, h: 2, name: '曹操' },
+            { id: 'guan', type: 'guan', x: 1, y: 2, w: 2, h: 1, name: '关羽' },
+            { id: 'zhang', type: 'zhang', x: 0, y: 0, w: 1, h: 2, name: '张飞' },
+            { id: 'zhao', type: 'zhao', x: 3, y: 0, w: 1, h: 2, name: '赵云' },
+            { id: 'ma', type: 'ma', x: 0, y: 2, w: 1, h: 2, name: '马超' },
+            { id: 'huang', type: 'huang', x: 3, y: 2, w: 1, h: 2, name: '黄忠' },
+            { id: 'soldier1', type: 'soldier', x: 0, y: 4, w: 1, h: 1, name: '卒' },
+            { id: 'soldier2', type: 'soldier', x: 1, y: 3, w: 1, h: 1, name: '卒' },
+            { id: 'soldier3', type: 'soldier', x: 2, y: 3, w: 1, h: 1, name: '卒' },
+            { id: 'soldier4', type: 'soldier', x: 3, y: 4, w: 1, h: 1, name: '卒' }
+        ];
+        
+        function initGame() {
+            pieces = JSON.parse(JSON.stringify(initialLayout));
+            moves = 0;
+            updateMoves();
+            renderBoard();
+        }
+        
+        function renderBoard() {
+            const board = document.getElementById('board');
+            // 清除现有棋子
+            const existingPieces = board.querySelectorAll('.piece');
+            existingPieces.forEach(p => p.remove());
+            
+            // 创建棋子
+            pieces.forEach(piece => {
+                const el = document.createElement('div');
+                el.className = `piece ${piece.type}`;
+                el.id = piece.id;
+                el.style.left = piece.x * CELL_SIZE + 'px';
+                el.style.top = piece.y * CELL_SIZE + 'px';
+                el.textContent = piece.name;
+                
+                // 触摸和鼠标事件
+                el.addEventListener('mousedown', startDrag);
+                el.addEventListener('touchstart', startDrag, {passive: false});
+                
+                board.appendChild(el);
+            });
+        }
+        
+        function startDrag(e) {
+            e.preventDefault();
+            const pieceEl = e.target;
+            const pieceId = pieceEl.id;
+            selectedPiece = pieces.find(p => p.id === pieceId);
+            
+            if (!selectedPiece) return;
+            
+            isDragging = true;
+            
+            const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+            const clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
+            
+            dragStartX = clientX;
+            dragStartY = clientY;
+            pieceStartX = selectedPiece.x;
+            pieceStartY = selectedPiece.y;
+            
+            document.addEventListener('mousemove', drag);
+            document.addEventListener('mouseup', endDrag);
+            document.addEventListener('touchmove', drag, {passive: false});
+            document.addEventListener('touchend', endDrag);
+        }
+        
+        function drag(e) {
+            if (!isDragging || !selectedPiece) return;
+            e.preventDefault();
+            
+            const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+            const clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
+            
+            const dx = clientX - dragStartX;
+            const dy = clientY - dragStartY;
+            
+            // 判断移动方向
+            const threshold = 30;
+            let newX = pieceStartX;
+            let newY = pieceStartY;
+            
+            if (Math.abs(dx) > Math.abs(dy)) {
+                // 水平移动
+                if (dx > threshold) newX = pieceStartX + 1;
+                else if (dx < -threshold) newX = pieceStartX - 1;
+            } else {
+                // 垂直移动
+                if (dy > threshold) newY = pieceStartY + 1;
+                else if (dy < -threshold) newY = pieceStartY - 1;
+            }
+            
+            // 检查是否可以移动
+            if (canMove(selectedPiece, newX, newY)) {
+                movePiece(selectedPiece, newX, newY);
+                endDrag();
+            }
+        }
+        
+        function endDrag() {
+            isDragging = false;
+            selectedPiece = null;
+            document.removeEventListener('mousemove', drag);
+            document.removeEventListener('mouseup', endDrag);
+            document.removeEventListener('touchmove', drag);
+            document.removeEventListener('touchend', endDrag);
+        }
+        
+        function canMove(piece, newX, newY) {
+            // 边界检查
+            if (newX < 0 || newY < 0 || newX + piece.w > BOARD_WIDTH || newY + piece.h > BOARD_HEIGHT) {
+                return false;
+            }
+            
+            // 检查与其他棋子的碰撞
+            for (let other of pieces) {
+                if (other.id === piece.id) continue;
+                
+                if (newX < other.x + other.w && newX + piece.w > other.x &&
+                    newY < other.y + other.h && newY + piece.h > other.y) {
+                    return false;
+                }
+            }
+            
+            return true;
+        }
+        
+        function movePiece(piece, newX, newY) {
+            if (piece.x === newX && piece.y === newY) return;
+            
+            piece.x = newX;
+            piece.y = newY;
+            moves++;
+            updateMoves();
+            renderBoard();
+            
+            // 检查胜利条件
+            if (piece.id === 'cao' && piece.x === 1 && piece.y === 3) {
+                setTimeout(showVictory, 300);
+            }
+        }
+        
+        function updateMoves() {
+            document.getElementById('moves').textContent = moves;
+        }
+        
+        function showVictory() {
+            document.getElementById('finalMoves').textContent = moves;
+            document.getElementById('victoryModal').style.display = 'flex';
+        }
+        
+        function resetGame() {
+            document.getElementById('victoryModal').style.display = 'none';
+            initGame();
+        }
+        
+        function showRules() {
+            alert('华容道游戏规则：\n\n' +
+                  '1. 目标：将曹操（红色大方块）移动到最下方的出口位置\n' +
+                  '2. 操作：拖动棋子进行移动\n' +
+                  '3. 限制：棋子不能重叠，不能移出边界\n' +
+                  '4. 挑战：用最少的步数完成！\n\n' +
+                  '提示：横刀立马布局最少需要81步才能解开。');
+        }
+        
+        // 键盘控制
+        document.addEventListener('keydown', (e) => {
+            if (!selectedPiece) return;
+            
+            let newX = selectedPiece.x;
+            let newY = selectedPiece.y;
+            
+            switch(e.key) {
+                case 'ArrowUp': newY--; break;
+                case 'ArrowDown': newY++; break;
+                case 'ArrowLeft': newX--; break;
+                case 'ArrowRight': newX++; break;
+                default: return;
+            }
+            
+            e.preventDefault();
+            if (canMove(selectedPiece, newX, newY)) {
+                movePiece(selectedPiece, newX, newY);
+            }
+        });
+        
+        // 初始化游戏
+        initGame();
+    </script>
+</body>
+</html>

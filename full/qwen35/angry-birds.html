@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>愤怒的小鸟</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background: linear-gradient(180deg, #87CEEB 0%, #E0F6FF 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .game-container {
+            position: relative;
+            width: 1200px;
+            height: 600px;
+            background: linear-gradient(180deg, #87CEEB 0%, #98D8E8 50%, #90EE90 50%, #228B22 100%);
+            border: 4px solid #333;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        .ui-panel {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            z-index: 100;
+        }
+
+        .ui-panel div {
+            margin: 5px 0;
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .controls {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 100;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            background: linear-gradient(135deg, #ff6b6b, #ee5a5a);
+            color: white;
+            font-weight: bold;
+            margin: 5px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            display: none;
+            z-index: 200;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .message h2 {
+            font-size: 36px;
+            margin-bottom: 20px;
+            color: #ff6b6b;
+        }
+
+        .message p {
+            font-size: 20px;
+            margin-bottom: 20px;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container" id="gameContainer">
+        <canvas id="gameCanvas"></canvas>
+        <div class="ui-panel">
+            <div>分数：<span id="score">0</span></div>
+            <div>小鸟剩余：<span id="birdsLeft">3</span></div>
+            <div>关卡：<span id="level">1</span></div>
+        </div>
+        <div class="controls">
+            <button onclick="resetGame()">🔄 重置</button>
+            <button onclick="nextLevel()">➡️ 下一关</button>
+        </div>
+        <div class="message" id="message">
+            <h2 id="messageTitle">恭喜！</h2>
+            <p id="messageText">你成功了！</p>
+            <button onclick="nextLevel()">下一关</button>
+            <button onclick="resetGame()">重新开始</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = 1200;
+        canvas.height = 600;
+
+        const GRAVITY = 0.5;
+        const GROUND_Y = 500;
+        const SLING_X = 150;
+        const SLING_Y = 400;
+
+        let bird = null;
+        let isDragging = false;
+        let dragStart = { x: 0, y: 0 };
+        let dragCurrent = { x: 0, y: 0 };
+        let projectiles = [];
+        let targets = [];
+        let particles = [];
+        let score = 0;
+        let birdsLeft = 3;
+        let level = 1;
+        let gameState = 'aiming';
+
+        const levels = [
+            {
+                targets: [
+                    { x: 800, y: 450, radius: 30, health: 1, type: 'pig' },
+                    { x: 900, y: 450, radius: 30, health: 1, type: 'pig' }
+                ]
+            },
+            {
+                targets: [
+                    { x: 700, y: 450, radius: 30, health: 1, type: 'pig' },
+                    { x: 800, y: 450, radius: 30, health: 1, type: 'pig' },
+                    { x: 900, y: 450, radius: 30, health: 1, type: 'pig' }
+                ]
+            },
+            {
+                targets: [
+                    { x: 750, y: 450, radius: 40, health: 2, type: 'wood' },
+                    { x: 850, y: 400, radius: 30, health: 1, type: 'pig' },
+                    { x: 950, y: 450, radius: 40, health: 2, type: 'stone' }
+                ]
+            }
+        ];
+
+        class Bird {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.radius = 20;
+                this.vx = 0;
+                this.vy = 0;
+                this.color = '#ff4444';
+            }
+
+            update() {
+                this.vy += GRAVITY;
+                this.x += this.vx;
+                this.y += this.vy;
+
+                if (this.y + this.radius > GROUND_Y) {
+                    this.y = GROUND_Y - this.radius;
+                    this.vy = -this.vy * 0.5;
+                    this.vx *= 0.8;
+                }
+
+                if (this.x < 0 || this.x > canvas.width) {
+                    return true;
+                }
+
+                if (Math.abs(this.vx) < 0.1 && Math.abs(this.vy) < 0.1 && this.y > GROUND_Y - this.radius - 1) {
+                    return true;
+                }
+
+                return false;
+            }
+
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.fill();
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.arc(this.x - 5, this.y - 3, 5, 0, Math.PI * 2);
+                ctx.fillStyle = 'white';
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(this.x + 5, this.y - 3, 5, 0, Math.PI * 2);
+                ctx.fillStyle = 'white';
+                ctx.fill();
+
+                ctx.beginPath();
+                ctx.arc(this.x - 5, this.y - 3, 2, 0, Math.PI * 2);
+                ctx.fillStyle = 'black';
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(this.x + 5, this.y - 3, 2, 0, Math.PI * 2);
+                ctx.fillStyle = 'black';
+                ctx.fill();
+
+                ctx.beginPath();
+                ctx.moveTo(this.x + 15, this.y);
+                ctx.lineTo(this.x + 25, this.y + 5);
+                ctx.strokeStyle = '#ffcc00';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+            }
+        }
+
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 10;
+                this.vy = (Math.random() - 0.5) * 10;
+                this.radius = Math.random() * 5 + 2;
+                this.color = color;
+                this.life = 1;
+            }
+
+            update() {
+                this.vy += GRAVITY;
+                this.x += this.vx;
+                this.y += this.vy;
+                this.life -= 0.02;
+            }
+
+            draw() {
+                ctx.globalAlpha = this.life;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            }
+        }
+
+        function initLevel() {
+            const levelData = levels[(level - 1) % levels.length];
+            targets = JSON.parse(JSON.stringify(levelData.targets));
+            projectiles = [];
+            particles = [];
+            birdsLeft = 3;
+            createBird();
+            updateUI();
+        }
+
+        function createBird() {
+            bird = new Bird(SLING_X, SLING_Y);
+            gameState = 'aiming';
+        }
+
+        function createParticles(x, y, color, count = 10) {
+            for (let i = 0; i < count; i++) {
+                particles.push(new Particle(x, y, color));
+            }
+        }
+
+        function checkCollisions() {
+            if (!bird) return;
+
+            for (let i = targets.length - 1; i >= 0; i--) {
+                const target = targets[i];
+                const dx = bird.x - target.x;
+                const dy = bird.y - target.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (distance < bird.radius + target.radius) {
+                    const speed = Math.sqrt(bird.vx * bird.vx + bird.vy * bird.vy);
+                    if (speed > 3) {
+                        target.health -= 1;
+                        createParticles(target.x, target.y, target.type === 'pig' ? '#4CAF50' : '#8B4513', 15);
+
+                        if (target.health <= 0) {
+                            score += target.type === 'pig' ? 100 : 50;
+                            targets.splice(i, 1);
+                            createParticles(target.x, target.y, target.type === 'pig' ? '#4CAF50' : '#8B4513', 20);
+                        }
+
+                        bird.vx *= 0.5;
+                        bird.vy *= 0.5;
+                    }
+                }
+            }
+        }
+
+        function update() {
+            if (bird && gameState === 'fired') {
+                const shouldRemove = bird.update();
+                checkCollisions();
+
+                if (shouldRemove) {
+                    bird = null;
+                    birdsLeft--;
+                    updateUI();
+
+                    if (targets.length === 0) {
+                        showMessage('恭喜胜利！', `得分：${score}`);
+                    } else if (birdsLeft <= 0) {
+                        showMessage('游戏结束', `得分：${score}`);
+                    } else {
+                        setTimeout(createBird, 500);
+                    }
+                }
+            }
+
+            particles.forEach((p, index) => {
+                p.update();
+                if (p.life <= 0) particles.splice(index, 1);
+            });
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            ctx.fillStyle = '#87CEEB';
+            ctx.fillRect(0, 0, canvas.width, 300);
+
+            ctx.fillStyle = '#90EE90';
+            ctx.fillRect(0, 300, canvas.width, GROUND_Y - 300);
+
+            ctx.fillStyle = '#228B22';
+            ctx.fillRect(0, GROUND_Y, canvas.width, canvas.height - GROUND_Y);
+
+            if (bird && gameState === 'aiming') {
+                ctx.beginPath();
+                ctx.moveTo(SLING_X, SLING_Y);
+                ctx.lineTo(dragCurrent.x, dragCurrent.y);
+                ctx.strokeStyle = '#8B4513';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+
+                bird.x = dragCurrent.x;
+                bird.y = dragCurrent.y;
+            }
+
+            if (bird) bird.draw();
+
+            targets.forEach(target => {
+                ctx.beginPath();
+                ctx.arc(target.x, target.y, target.radius, 0, Math.PI * 2);
+                
+                if (target.type === 'pig') {
+                    ctx.fillStyle = '#4CAF50';
+                } else if (target.type === 'wood') {
+                    ctx.fillStyle = '#8B4513';
+                } else {
+                    ctx.fillStyle = '#808080';
+                }
+                
+                ctx.fill();
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                ctx.fillStyle = 'white';
+                ctx.beginPath();
+                ctx.arc(target.x - 8, target.y - 5, 6, 0, Math.PI * 2);
+                ctx.arc(target.x + 8, target.y - 5, 6, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = 'black';
+                ctx.beginPath();
+                ctx.arc(target.x - 8, target.y - 5, 3, 0, Math.PI * 2);
+                ctx.arc(target.x + 8, target.y - 5, 3, 0, Math.PI * 2);
+                ctx.fill();
+
+                if (target.health > 1) {
+                    ctx.fillStyle = 'white';
+                    ctx.font = '16px Arial';
+                    ctx.fillText(`HP: ${target.health}`, target.x - 20, target.y + target.radius + 20);
+                }
+            });
+
+            particles.forEach(p => p.draw());
+
+            if (bird && gameState === 'aiming') {
+                ctx.beginPath();
+                ctx.arc(SLING_X, SLING_Y, 10, 0, Math.PI * 2);
+                ctx.fillStyle = '#8B4513';
+                ctx.fill();
+            }
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function updateUI() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('birdsLeft').textContent = birdsLeft;
+            document.getElementById('level').textContent = level;
+        }
+
+        function showMessage(title, text) {
+            document.getElementById('messageTitle').textContent = title;
+            document.getElementById('messageText').textContent = text;
+            document.getElementById('message').style.display = 'block';
+        }
+
+        function hideMessage() {
+            document.getElementById('message').style.display = 'none';
+        }
+
+        function resetGame() {
+            score = 0;
+            level = 1;
+            hideMessage();
+            initLevel();
+        }
+
+        function nextLevel() {
+            level++;
+            hideMessage();
+            initLevel();
+        }
+
+        canvas.addEventListener('mousedown', (e) => {
+            if (gameState !== 'aiming' || !bird) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            const dx = x - SLING_X;
+            const dy = y - SLING_Y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist < 50) {
+                isDragging = true;
+                dragStart = { x: SLING_X, y: SLING_Y };
+                dragCurrent = { x, y };
+            }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+
+            const rect = canvas.getBoundingClientRect();
+            dragCurrent.x = e.clientX - rect.left;
+            dragCurrent.y = e.clientY - rect.top;
+
+            const dx = dragCurrent.x - SLING_X;
+            const dy = dragCurrent.y - SLING_Y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist > 80) {
+                const angle = Math.atan2(dy, dx);
+                dragCurrent.x = SLING_X + Math.cos(angle) * 80;
+                dragCurrent.y = SLING_Y + Math.sin(angle) * 80;
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            if (!isDragging) return;
+
+            isDragging = false;
+            gameState = 'fired';
+
+            const dx = SLING_X - dragCurrent.x;
+            const dy = SLING_Y - dragCurrent.y;
+
+            bird.vx = dx * 0.15;
+            bird.vy = dy * 0.15;
+            bird.x = SLING_X;
+            bird.y = SLING_Y;
+        });
+
+        initLevel();
+        gameLoop();
+    </script>
+</body>
+</html>

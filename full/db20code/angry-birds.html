@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>愤怒的小鸟 - DB20版</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background: linear-gradient(180deg, #a8edea 0%, #fed6e3 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .game-container {
+            position: relative;
+            width: 1200px;
+            height: 600px;
+            background: linear-gradient(180deg, #a8edea 0%, #fed6e3 50%, #98fb98 50%, #2e8b57 100%);
+            border: 5px solid #2c3e50;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            cursor: crosshair;
+        }
+
+        .ui-panel {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(240, 240, 240, 0.95));
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+            z-index: 100;
+            border: 2px solid #ff6b9d;
+        }
+
+        .ui-panel div {
+            margin: 8px 0;
+            font-size: 18px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .ui-panel span {
+            color: #e74c3c;
+            font-size: 20px;
+        }
+
+        .controls {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        button {
+            padding: 12px 24px;
+            font-size: 16px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            background: linear-gradient(135deg, #ff6b9d, #c44569);
+            color: white;
+            font-weight: bold;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(245, 245, 245, 0.98));
+            padding: 50px;
+            border-radius: 25px;
+            text-align: center;
+            z-index: 200;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+            transition: transform 0.3s ease;
+            border: 3px solid #ff6b9d;
+        }
+
+        .message.show {
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        .message h2 {
+            font-size: 42px;
+            margin-bottom: 25px;
+            color: #ff6b9d;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .message p {
+            font-size: 24px;
+            margin-bottom: 25px;
+            color: #2c3e50;
+        }
+
+        .instructions {
+            position: absolute;
+            bottom: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-size: 14px;
+            color: #2c3e50;
+            z-index: 100;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container" id="gameContainer">
+        <canvas id="gameCanvas"></canvas>
+        <div class="ui-panel">
+            <div>🎯 分数：<span id="score">0</span></div>
+            <div>🐦 小鸟：<span id="birdsLeft">3</span></div>
+            <div>🏆 关卡：<span id="level">1</span></div>
+        </div>
+        <div class="controls">
+            <button onclick="resetGame()">🔄 重置游戏</button>
+            <button onclick="nextLevel()">➡️ 下一关</button>
+        </div>
+        <div class="message" id="message">
+            <h2 id="messageTitle">🎉 恭喜！</h2>
+            <p id="messageText">你成功了！</p>
+            <button onclick="nextLevel()">下一关</button>
+            <button onclick="resetGame()">重新开始</button>
+        </div>
+        <div class="instructions">
+            💡 拖拽小鸟向后拉伸，松开发射 | 目标：消灭所有绿猪
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = 1200;
+        canvas.height = 600;
+
+        const GRAVITY = 0.5;
+        const GROUND_Y = 500;
+        const SLING_X = 150;
+        const SLING_Y = 400;
+
+        let bird = null;
+        let isDragging = false;
+        let dragStart = { x: 0, y: 0 };
+        let dragCurrent = { x: 0, y: 0 };
+        let projectiles = [];
+        let targets = [];
+        let blocks = [];
+        let particles = [];
+        let score = 0;
+        let birdsLeft = 3;
+        let level = 1;
+        let gameState = 'aiming';
+        let trajectoryPoints = [];
+
+        const levels = [
+            {
+                targets: [
+                    { x: 800, y: 450, radius: 30, health: 1, type: 'pig' },
+                    { x: 950, y: 450, radius: 30, health: 1, type: 'pig' }
+                ],
+                blocks: []
+            },
+            {
+                targets: [
+                    { x: 750, y: 450, radius: 30, health: 1, type: 'pig' },
+                    { x: 850, y: 450, radius: 30, health: 1, type: 'pig' },
+                    { x: 950, y: 450, radius: 30, health: 1, type: 'pig' }
+                ],
+                blocks: [
+                    { x: 800, y: 420, width: 100, height: 20, type: 'wood' }
+                ]
+            },
+            {
+                targets: [
+                    { x: 700, y: 450, radius: 30, health: 1, type: 'pig' },
+                    { x: 850, y: 400, radius: 35, health: 2, type: 'pig' },
+                    { x: 1000, y: 450, radius: 30, health: 1, type: 'pig' }
+                ],
+                blocks: [
+                    { x: 780, y: 380, width: 20, height: 100, type: 'wood' },
+                    { x: 900, y: 380, width: 20, height: 100, type: 'stone' },
+                    { x: 840, y: 350, width: 80, height: 20, type: 'wood' }
+                ]
+            },
+            {
+                targets: [
+                    { x: 750, y: 400, radius: 40, health: 3, type: 'pig' },
+                    { x: 950, y: 450, radius: 30, health: 1, type: 'pig' }
+                ],
+                blocks: [
+                    { x: 700, y: 350, width: 20, height: 120, type: 'stone' },
+                    { x: 800, y: 350, width: 20, height: 120, type: 'stone' },
+                    { x: 750, y: 320, width: 120, height: 20, type: 'stone' },
+                    { x: 900, y: 420, width: 100, height: 20, type: 'wood' }
+                ]
+            }
+        ];
+
+        class Bird {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.radius = 20;
+                this.vx = 0;
+                this.vy = 0;
+                this.rotation = 0;
+                this.trail = [];
+            }
+
+            update() {
+                this.vy += GRAVITY;
+                this.x += this.vx;
+                this.y += this.vy;
+                this.rotation += this.vx * 0.05;
+
+                this.trail.push({ x: this.x, y: this.y });
+                if (this.trail.length > 20) this.trail.shift();
+
+                if (this.y + this.radius > GROUND_Y) {
+                    this.y = GROUND_Y - this.radius;
+                    this.vy = -this.vy * 0.5;
+                    this.vx *= 0.8;
+                }
+
+                if (this.x < 0 || this.x > canvas.width) {
+                    return true;
+                }
+
+                if (Math.abs(this.vx) < 0.1 && Math.abs(this.vy) < 0.1 && this.y > GROUND_Y - this.radius - 1) {
+                    return true;
+                }
+
+                return false;
+            }
+
+            draw() {
+                this.trail.forEach((point, index) => {
+                    const alpha = index / this.trail.length * 0.5;
+                    ctx.beginPath();
+                    ctx.arc(point.x, point.y, 3, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(255, 107, 157, ${alpha})`;
+                    ctx.fill();
+                });
+
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.rotation);
+
+                ctx.beginPath();
+                ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+                const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, this.radius);
+                gradient.addColorStop(0, '#ff9a9e');
+                gradient.addColorStop(1, '#ff6b9d');
+                ctx.fillStyle = gradient;
+                ctx.fill();
+                ctx.strokeStyle = '#c44569';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+
+                ctx.fillStyle = 'white';
+                ctx.beginPath();
+                ctx.arc(-6, -4, 6, 0, Math.PI * 2);
+                ctx.arc(6, -4, 6, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = 'black';
+                ctx.beginPath();
+                ctx.arc(-6, -4, 3, 0, Math.PI * 2);
+                ctx.arc(6, -4, 3, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.beginPath();
+                ctx.moveTo(15, 0);
+                ctx.lineTo(28, 8);
+                ctx.strokeStyle = '#ffcc00';
+                ctx.lineWidth = 4;
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(-5, 8);
+                ctx.quadraticCurveTo(0, 15, 5, 8);
+                ctx.strokeStyle = '#ff6b9d';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                ctx.restore();
+            }
+        }
+
+        class Block {
+            constructor(x, y, width, height, type) {
+                this.x = x;
+                this.y = y;
+                this.width = width;
+                this.height = height;
+                this.type = type;
+                this.health = type === 'stone' ? 3 : 2;
+            }
+
+            draw() {
+                const gradient = ctx.createLinearGradient(this.x, this.y, this.x + this.width, this.y + this.height);
+                
+                if (this.type === 'wood') {
+                    gradient.addColorStop(0, '#DEB887');
+                    gradient.addColorStop(1, '#8B4513');
+                } else {
+                    gradient.addColorStop(0, '#A9A9A9');
+                    gradient.addColorStop(1, '#696969');
+                }
+
+                ctx.fillStyle = gradient;
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+                
+                ctx.strokeStyle = this.type === 'wood' ? '#5D4037' : '#424242';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(this.x, this.y, this.width, this.height);
+
+                if (this.health > 1) {
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                    ctx.font = 'bold 14px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(`HP: ${this.health}`, this.x + this.width / 2, this.y + this.height / 2 + 5);
+                }
+            }
+        }
+
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 12;
+                this.vy = (Math.random() - 0.5) * 12 - 5;
+                this.radius = Math.random() * 6 + 2;
+                this.color = color;
+                this.life = 1;
+                this.rotation = Math.random() * Math.PI * 2;
+            }
+
+            update() {
+                this.vy += GRAVITY * 0.5;
+                this.x += this.vx;
+                this.y += this.vy;
+                this.life -= 0.025;
+                this.rotation += 0.1;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = this.life;
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.rotation);
+                
+                ctx.fillStyle = this.color;
+                ctx.fillRect(-this.radius, -this.radius, this.radius * 2, this.radius * 2);
+                
+                ctx.restore();
+            }
+        }
+
+        function initLevel() {
+            const levelData = levels[(level - 1) % levels.length];
+            targets = JSON.parse(JSON.stringify(levelData.targets));
+            blocks = levelData.blocks.map(b => new Block(b.x, b.y, b.width, b.height, b.type));
+            projectiles = [];
+            particles = [];
+            birdsLeft = 3;
+            createBird();
+            updateUI();
+        }
+
+        function createBird() {
+            bird = new Bird(SLING_X, SLING_Y);
+            gameState = 'aiming';
+        }
+
+        function createParticles(x, y, color, count = 15) {
+            for (let i = 0; i < count; i++) {
+                particles.push(new Particle(x, y, color));
+            }
+        }
+
+        function checkCollisions() {
+            if (!bird) return;
+
+            for (let i = targets.length - 1; i >= 0; i--) {
+                const target = targets[i];
+                const dx = bird.x - target.x;
+                const dy = bird.y - target.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (distance < bird.radius + target.radius) {
+                    const speed = Math.sqrt(bird.vx * bird.vx + bird.vy * bird.vy);
+                    if (speed > 3) {
+                        target.health -= 1;
+                        createParticles(target.x, target.y, '#4CAF50', 20);
+
+                        if (target.health <= 0) {
+                            score += target.type === 'pig' ? 100 : 50;
+                            targets.splice(i, 1);
+                            createParticles(target.x, target.y, '#4CAF50', 30);
+                        }
+
+                        bird.vx *= 0.6;
+                        bird.vy *= 0.6;
+                    }
+                }
+            }
+
+            blocks.forEach((block, index) => {
+                if (bird.x + bird.radius > block.x &&
+                    bird.x - bird.radius < block.x + block.width &&
+                    bird.y + bird.radius > block.y &&
+                    bird.y - bird.radius < block.y + block.height) {
+                    
+                    const speed = Math.sqrt(bird.vx * bird.vx + bird.vy * bird.vy);
+                    if (speed > 4) {
+                        block.health -= 1;
+                        createParticles(bird.x, bird.y, block.type === 'wood' ? '#DEB887' : '#A9A9A9', 15);
+                        
+                        if (block.health <= 0) {
+                            blocks.splice(index, 1);
+                            createParticles(block.x + block.width / 2, block.y + block.height / 2, 
+                                          block.type === 'wood' ? '#DEB887' : '#A9A9A9', 25);
+                            score += 25;
+                        }
+
+                        bird.vx *= -0.5;
+                        bird.vy *= 0.5;
+                    }
+                }
+            });
+        }
+
+        function drawTrajectory() {
+            if (!isDragging || !bird) return;
+
+            const dx = SLING_X - dragCurrent.x;
+            const dy = SLING_Y - dragCurrent.y;
+            let vx = dx * 0.15;
+            let vy = dy * 0.15;
+            let x = SLING_X;
+            let y = SLING_Y;
+
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+
+            for (let i = 0; i < 50; i++) {
+                vy += GRAVITY;
+                x += vx;
+                y += vy;
+
+                if (y > GROUND_Y) break;
+
+                ctx.lineTo(x, y);
+            }
+
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+
+        function update() {
+            if (bird && gameState === 'fired') {
+                const shouldRemove = bird.update();
+                checkCollisions();
+
+                if (shouldRemove) {
+                    bird = null;
+                    birdsLeft--;
+                    updateUI();
+
+                    if (targets.length === 0) {
+                        showMessage('🎉 恭喜胜利！', `得分：${score}分`);
+                    } else if (birdsLeft <= 0) {
+                        showMessage('😢 游戏结束', `得分：${score}分`);
+                    } else {
+                        setTimeout(createBird, 800);
+                    }
+                }
+            }
+
+            particles.forEach((p, index) => {
+                p.update();
+                if (p.life <= 0) particles.splice(index, 1);
+            });
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const skyGradient = ctx.createLinearGradient(0, 0, 0, GROUND_Y);
+            skyGradient.addColorStop(0, '#a8edea');
+            skyGradient.addColorStop(1, '#fed6e3');
+            ctx.fillStyle = skyGradient;
+            ctx.fillRect(0, 0, canvas.width, GROUND_Y);
+
+            const grassGradient = ctx.createLinearGradient(0, GROUND_Y - 50, 0, canvas.height);
+            grassGradient.addColorStop(0, '#98fb98');
+            grassGradient.addColorStop(1, '#2e8b57');
+            ctx.fillStyle = grassGradient;
+            ctx.fillRect(0, GROUND_Y - 50, canvas.width, canvas.height - GROUND_Y + 50);
+
+            ctx.strokeStyle = '#1b5e20';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(0, GROUND_Y);
+            ctx.lineTo(canvas.width, GROUND_Y);
+            ctx.stroke();
+
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(SLING_X - 15, SLING_Y - 80, 10, 100);
+            ctx.fillRect(SLING_X + 5, SLING_Y - 80, 10, 100);
+
+            if (bird && gameState === 'aiming') {
+                ctx.beginPath();
+                ctx.moveTo(SLING_X - 10, SLING_Y - 60);
+                ctx.lineTo(dragCurrent.x, dragCurrent.y);
+                ctx.strokeStyle = '#5D4037';
+                ctx.lineWidth = 4;
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(SLING_X + 10, SLING_Y - 60);
+                ctx.lineTo(dragCurrent.x, dragCurrent.y);
+                ctx.stroke();
+
+                bird.x = dragCurrent.x;
+                bird.y = dragCurrent.y;
+            }
+
+            drawTrajectory();
+
+            if (bird) bird.draw();
+
+            blocks.forEach(block => block.draw());
+
+            targets.forEach(target => {
+                ctx.beginPath();
+                ctx.arc(target.x, target.y, target.radius, 0, Math.PI * 2);
+                
+                const gradient = ctx.createRadialGradient(target.x - 10, target.y - 10, 0, 
+                                                          target.x, target.y, target.radius);
+                gradient.addColorStop(0, '#81C784');
+                gradient.addColorStop(1, '#388E3C');
+                ctx.fillStyle = gradient;
+                ctx.fill();
+                
+                ctx.strokeStyle = '#1B5E20';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+
+                ctx.fillStyle = 'white';
+                ctx.beginPath();
+                ctx.arc(target.x - 10, target.y - 5, 8, 0, Math.PI * 2);
+                ctx.arc(target.x + 10, target.y - 5, 8, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = 'black';
+                ctx.beginPath();
+                ctx.arc(target.x - 10, target.y - 5, 4, 0, Math.PI * 2);
+                ctx.arc(target.x + 10, target.y - 5, 4, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.beginPath();
+                ctx.arc(target.x, target.y + 8, 8, 0, Math.PI);
+                ctx.strokeStyle = '#1B5E20';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                if (target.health > 1) {
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+                    ctx.font = 'bold 16px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(`❤️ ${target.health}`, target.x, target.y + target.radius + 20);
+                }
+            });
+
+            particles.forEach(p => p.draw());
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function updateUI() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('birdsLeft').textContent = birdsLeft;
+            document.getElementById('level').textContent = level;
+        }
+
+        function showMessage(title, text) {
+            document.getElementById('messageTitle').textContent = title;
+            document.getElementById('messageText').textContent = text;
+            document.getElementById('message').classList.add('show');
+        }
+
+        function hideMessage() {
+            document.getElementById('message').classList.remove('show');
+        }
+
+        function resetGame() {
+            score = 0;
+            level = 1;
+            hideMessage();
+            initLevel();
+        }
+
+        function nextLevel() {
+            level++;
+            hideMessage();
+            initLevel();
+        }
+
+        canvas.addEventListener('mousedown', (e) => {
+            if (gameState !== 'aiming' || !bird) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            const dx = x - SLING_X;
+            const dy = y - SLING_Y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist < 60) {
+                isDragging = true;
+                dragStart = { x: SLING_X, y: SLING_Y };
+                dragCurrent = { x, y };
+            }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+
+            const rect = canvas.getBoundingClientRect();
+            dragCurrent.x = e.clientX - rect.left;
+            dragCurrent.y = e.clientY - rect.top;
+
+            const dx = dragCurrent.x - SLING_X;
+            const dy = dragCurrent.y - SLING_Y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist > 100) {
+                const angle = Math.atan2(dy, dx);
+                dragCurrent.x = SLING_X + Math.cos(angle) * 100;
+                dragCurrent.y = SLING_Y + Math.sin(angle) * 100;
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            if (!isDragging) return;
+
+            isDragging = false;
+            gameState = 'fired';
+
+            const dx = SLING_X - dragCurrent.x;
+            const dy = SLING_Y - dragCurrent.y;
+
+            bird.vx = dx * 0.15;
+            bird.vy = dy * 0.15;
+            bird.x = SLING_X;
+            bird.y = SLING_Y;
+        });
+
+        canvas.addEventListener('mouseleave', () => {
+            if (isDragging) {
+                isDragging = false;
+                bird.x = SLING_X;
+                bird.y = SLING_Y;
+            }
+        });
+
+        initLevel();
+        gameLoop();
+    </script>
+</body>
+</html>

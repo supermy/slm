@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>华容道 - GLM5版</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .game-container {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+        }
+
+        h1 {
+            text-align: center;
+            color: #1e3c72;
+            margin-bottom: 20px;
+            font-size: 36px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .game-board {
+            width: 400px;
+            height: 500px;
+            background: linear-gradient(135deg, #e8e8e8 0%, #d0d0d0 100%);
+            border: 6px solid #1e3c72;
+            border-radius: 10px;
+            position: relative;
+            margin: 0 auto 20px;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.1);
+        }
+
+        .exit-marker {
+            position: absolute;
+            bottom: -6px;
+            left: 100px;
+            width: 200px;
+            height: 6px;
+            background: #ff6b6b;
+            border-radius: 0 0 3px 3px;
+        }
+
+        .block {
+            position: absolute;
+            border: 3px solid #333;
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 20px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            user-select: none;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        .block:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+            z-index: 10;
+        }
+
+        .block:active {
+            transform: scale(0.98);
+        }
+
+        .block.caocao {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a5a 100%);
+            color: white;
+            font-size: 28px;
+            border-color: #cc4444;
+        }
+
+        .block.general {
+            background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
+            color: white;
+            border-color: #2d7a6e;
+        }
+
+        .block.soldier {
+            background: linear-gradient(135deg, #ffd93d 0%, #f9c74f 100%);
+            color: #333;
+            border-color: #d4a500;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+
+        button {
+            padding: 12px 28px;
+            font-size: 16px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            color: white;
+            font-weight: bold;
+            transition: all 0.2s;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .info {
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+            line-height: 1.8;
+        }
+
+        .move-count {
+            font-size: 24px;
+            font-weight: bold;
+            color: #1e3c72;
+        }
+
+        .layout-name {
+            font-size: 16px;
+            color: #2a5298;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .win-message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            background: white;
+            padding: 50px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+            text-align: center;
+            z-index: 1000;
+            transition: transform 0.3s ease;
+        }
+
+        .win-message.show {
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        .win-message h2 {
+            color: #4ecdc4;
+            font-size: 42px;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .win-message p {
+            font-size: 22px;
+            color: #333;
+            margin-bottom: 25px;
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            z-index: 999;
+            backdrop-filter: blur(5px);
+        }
+
+        .instructions {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            font-size: 13px;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>🏯 华容道</h1>
+        <div class="game-board" id="gameBoard">
+            <div class="exit-marker"></div>
+        </div>
+        <div class="info">
+            <p class="layout-name" id="layoutName">经典布局</p>
+            <p>移动步数：<span class="move-count" id="moveCount">0</span></p>
+        </div>
+        <div class="controls">
+            <button onclick="resetGame()">🔄 重新开始</button>
+            <button onclick="changeLayout()">🎲 更换布局</button>
+        </div>
+        <div class="instructions">
+            <p>🎯 目标：将曹操（红色大方块）移动到底部出口</p>
+            <p>💡 提示：点击方块可自动移动到相邻空位</p>
+        </div>
+    </div>
+
+    <div class="overlay" id="overlay"></div>
+    <div class="win-message" id="winMessage">
+        <h2>🎉 恭喜胜利！</h2>
+        <p>你用了 <span id="finalMoves" style="color: #1e3c72; font-weight: bold;">0</span> 步完成游戏</p>
+        <button onclick="resetGame()">再玩一次</button>
+    </div>
+
+    <script>
+        const BOARD_WIDTH = 4;
+        const BOARD_HEIGHT = 5;
+        const CELL_SIZE = 100;
+
+        const layouts = [
+            {
+                name: "经典布局",
+                blocks: [
+                    { type: 'caocao', name: '曹操', width: 2, height: 2, x: 1, y: 0 },
+                    { type: 'general', name: '张飞', width: 1, height: 2, x: 0, y: 0 },
+                    { type: 'general', name: '赵云', width: 1, height: 2, x: 3, y: 0 },
+                    { type: 'general', name: '马超', width: 1, height: 2, x: 0, y: 2 },
+                    { type: 'general', name: '黄忠', width: 1, height: 2, x: 3, y: 2 },
+                    { type: 'soldier', name: '卒', width: 1, height: 1, x: 1, y: 2 },
+                    { type: 'soldier', name: '卒', width: 1, height: 1, x: 2, y: 2 },
+                    { type: 'soldier', name: '卒', width: 1, height: 1, x: 1, y: 3 },
+                    { type: 'soldier', name: '卒', width: 1, height: 1, x: 2, y: 3 },
+                    { type: 'soldier', name: '卒', width: 1, height: 1, x: 0, y: 4 }
+                ]
+            },
+            {
+                name: "横刀立马",
+                blocks: [
+                    { type: 'caocao', name: '曹操', width: 2, height: 2, x: 1, y: 0 },
+                    { type: 'general', name: '张飞', width: 1, height: 2, x: 0, y: 0 },
+                    { type: 'general', name: '赵云', width: 1, height: 2, x: 3, y: 0 },
+                    { type: 'general', name: '关羽', width: 2, height: 1, x: 1, y: 2 },
+                    { type: 'general', name: '马超', width: 1, height: 2, x: 0, y: 3 },
+                    { type: 'general', name: '黄忠', width: 1, height: 2, x: 3, y: 3 },
+                    { type: 'soldier', name: '卒', width: 1, height: 1, x: 1, y: 3 },
+                    { type: 'soldier', name: '卒', width: 1, height: 1, x: 2, y: 3 },
+                    { type: 'soldier', name: '卒', width: 1, height: 1, x: 1, y: 4 },
+                    { type: 'soldier', name: '卒', width: 1, height: 1, x: 2, y: 4 }
+                ]
+            },
+            {
+                name: "兵分三路",
+                blocks: [
+                    { type: 'caocao', name: '曹操', width: 2, height: 2, x: 1, y: 0 },
+                    { type: 'general', name: '张飞', width: 1, height: 2, x: 0, y: 0 },
+                    { type: 'general', name: '赵云', width: 1, height: 2, x: 3, y: 0 },
+                    { type: 'soldier', name: '卒', width: 1, height: 1, x: 0, y: 2 },
+                    { type: 'soldier', name: '卒', width: 1, height: 1, x: 1, y: 2 },
+                    { type: 'soldier', name: '卒', width: 1, height: 1, x: 2, y: 2 },
+                    { type: 'soldier', name: '卒', width: 1, height: 1, x: 3, y: 2 },
+                    { type: 'soldier', name: '卒', width: 1, height: 1, x: 0, y: 3 },
+                    { type: 'soldier', name: '卒', width: 1, height: 1, x: 1, y: 3 },
+                    { type: 'soldier', name: '卒', width: 1, height: 1, x: 2, y: 3 },
+                    { type: 'soldier', name: '卒', width: 1, height: 1, x: 3, y: 3 }
+                ]
+            }
+        ];
+
+        let currentLayoutIndex = 0;
+        let blocks = [];
+        let moveCount = 0;
+
+        function initGame() {
+            blocks = JSON.parse(JSON.stringify(layouts[currentLayoutIndex].blocks));
+            moveCount = 0;
+            updateMoveCount();
+            updateLayoutName();
+            renderBoard();
+        }
+
+        function renderBoard() {
+            const board = document.getElementById('gameBoard');
+            const existingBlocks = board.querySelectorAll('.block');
+            existingBlocks.forEach(b => b.remove());
+
+            blocks.forEach((block, index) => {
+                const blockEl = document.createElement('div');
+                blockEl.className = `block ${block.type}`;
+                blockEl.style.width = `${block.width * CELL_SIZE - 6}px`;
+                blockEl.style.height = `${block.height * CELL_SIZE - 6}px`;
+                blockEl.style.left = `${block.x * CELL_SIZE + 3}px`;
+                blockEl.style.top = `${block.y * CELL_SIZE + 3}px`;
+                blockEl.textContent = block.name;
+                blockEl.onclick = () => tryMove(index);
+                board.appendChild(blockEl);
+            });
+        }
+
+        function canMove(blockIndex, dx, dy) {
+            const block = blocks[blockIndex];
+            const newX = block.x + dx;
+            const newY = block.y + dy;
+
+            if (newX < 0 || newX + block.width > BOARD_WIDTH) return false;
+            if (newY < 0 || newY + block.height > BOARD_HEIGHT) return false;
+
+            for (let i = 0; i < blocks.length; i++) {
+                if (i === blockIndex) continue;
+                const other = blocks[i];
+                if (newX < other.x + other.width &&
+                    newX + block.width > other.x &&
+                    newY < other.y + other.height &&
+                    newY + block.height > other.y) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        function tryMove(blockIndex) {
+            const block = blocks[blockIndex];
+            let moved = false;
+
+            const directions = [
+                { dx: 0, dy: -1 },
+                { dx: 0, dy: 1 },
+                { dx: -1, dy: 0 },
+                { dx: 1, dy: 0 }
+            ];
+
+            for (const dir of directions) {
+                if (canMove(blockIndex, dir.dx, dir.dy)) {
+                    block.x += dir.dx;
+                    block.y += dir.dy;
+                    moveCount++;
+                    updateMoveCount();
+                    moved = true;
+                    break;
+                }
+            }
+
+            if (moved) {
+                renderBoard();
+                checkWin();
+            }
+        }
+
+        function checkWin() {
+            const caocao = blocks.find(b => b.type === 'caocao');
+            if (caocao.x === 1 && caocao.y === 3) {
+                setTimeout(() => {
+                    document.getElementById('finalMoves').textContent = moveCount;
+                    document.getElementById('overlay').style.display = 'block';
+                    document.getElementById('winMessage').classList.add('show');
+                }, 200);
+            }
+        }
+
+        function updateMoveCount() {
+            document.getElementById('moveCount').textContent = moveCount;
+        }
+
+        function updateLayoutName() {
+            document.getElementById('layoutName').textContent = layouts[currentLayoutIndex].name;
+        }
+
+        function resetGame() {
+            document.getElementById('overlay').style.display = 'none';
+            document.getElementById('winMessage').classList.remove('show');
+            initGame();
+        }
+
+        function changeLayout() {
+            currentLayoutIndex = (currentLayoutIndex + 1) % layouts.length;
+            resetGame();
+        }
+
+        initGame();
+    </script>
+</body>
+</html>

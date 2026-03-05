@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>华容道游戏</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .game-container {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 32px;
+        }
+
+        .game-board {
+            width: 400px;
+            height: 500px;
+            background: #f0f0f0;
+            border: 4px solid #333;
+            border-radius: 10px;
+            position: relative;
+            margin: 0 auto 20px;
+        }
+
+        .block {
+            position: absolute;
+            border: 2px solid #333;
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+
+        .block:hover {
+            transform: scale(1.02);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .block.caocao {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a5a);
+            color: white;
+        }
+
+        .block.general {
+            background: linear-gradient(135deg, #4ecdc4, #44a08d);
+            color: white;
+        }
+
+        .block.soldier {
+            background: linear-gradient(135deg, #a8e6cf, #88d8b0);
+            color: #333;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 12px 24px;
+            font-size: 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .info {
+            text-align: center;
+            margin-top: 15px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .move-count {
+            font-size: 18px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .win-message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            display: none;
+            z-index: 1000;
+        }
+
+        .win-message h2 {
+            color: #4ecdc4;
+            font-size: 36px;
+            margin-bottom: 20px;
+        }
+
+        .win-message p {
+            font-size: 20px;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            z-index: 999;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>🎮 华容道</h1>
+        <div class="game-board" id="gameBoard"></div>
+        <div class="controls">
+            <button onclick="resetGame()">🔄 重新开始</button>
+            <button onclick="changeLayout()">🎲 更换布局</button>
+        </div>
+        <div class="info">
+            <p>移动步数：<span class="move-count" id="moveCount">0</span></p>
+            <p>目标：帮助曹操从下方出口逃脱</p>
+        </div>
+    </div>
+
+    <div class="overlay" id="overlay"></div>
+    <div class="win-message" id="winMessage">
+        <h2>🎉 恭喜胜利！</h2>
+        <p>你用了 <span id="finalMoves">0</span> 步</p>
+        <button onclick="resetGame()">再玩一次</button>
+    </div>
+
+    <script>
+        const BOARD_WIDTH = 5;
+        const BOARD_HEIGHT = 4;
+        const CELL_SIZE = 100;
+
+        const layouts = [
+            {
+                name: "经典布局",
+                blocks: [
+                    { type: 'caocao', name: '曹操', width: 2, height: 2, x: 1, y: 0 },
+                    { type: 'general', name: '张飞', width: 1, height: 2, x: 0, y: 0 },
+                    { type: 'general', name: '赵云', width: 1, height: 2, x: 3, y: 0 },
+                    { type: 'general', name: '马超', width: 1, height: 2, x: 0, y: 2 },
+                    { type: 'general', name: '黄忠', width: 1, height: 2, x: 3, y: 2 },
+                    { type: 'soldier', name: '卒', width: 1, height: 1, x: 1, y: 2 },
+                    { type: 'soldier', name: '卒', width: 1, height: 1, x: 2, y: 2 },
+                    { type: 'soldier', name: '卒', width: 1, height: 1, x: 0, y: 4 },
+                    { type: 'soldier', name: '卒', width: 1, height: 1, x: 1, y: 4 },
+                    { type: 'soldier', name: '卒', width: 1, height: 1, x: 2, y: 4 },
+                    { type: 'soldier', name: '卒', width: 1, height: 1, x: 3, y: 4 }
+                ]
+            },
+            {
+                name: "简易布局",
+                blocks: [
+                    { type: 'caocao', name: '曹操', width: 2, height: 2, x: 1, y: 0 },
+                    { type: 'general', name: '张飞', width: 1, height: 2, x: 0, y: 0 },
+                    { type: 'general', name: '赵云', width: 1, height: 2, x: 3, y: 0 },
+                    { type: 'soldier', name: '卒', width: 1, height: 1, x: 0, y: 2 },
+                    { type: 'soldier', name: '卒', width: 1, height: 1, x: 1, y: 2 },
+                    { type: 'soldier', name: '卒', width: 1, height: 1, x: 2, y: 2 },
+                    { type: 'soldier', name: '卒', width: 1, height: 1, x: 3, y: 2 },
+                    { type: 'soldier', name: '卒', width: 1, height: 1, x: 0, y: 3 },
+                    { type: 'soldier', name: '卒', width: 1, height: 1, x: 1, y: 3 },
+                    { type: 'soldier', name: '卒', width: 1, height: 1, x: 2, y: 3 },
+                    { type: 'soldier', name: '卒', width: 1, height: 1, x: 3, y: 3 }
+                ]
+            }
+        ];
+
+        let currentLayoutIndex = 0;
+        let blocks = [];
+        let moveCount = 0;
+
+        function initGame() {
+            blocks = JSON.parse(JSON.stringify(layouts[currentLayoutIndex].blocks));
+            moveCount = 0;
+            updateMoveCount();
+            renderBoard();
+        }
+
+        function renderBoard() {
+            const board = document.getElementById('gameBoard');
+            board.innerHTML = '';
+
+            blocks.forEach((block, index) => {
+                const blockEl = document.createElement('div');
+                blockEl.className = `block ${block.type}`;
+                blockEl.style.width = `${block.width * CELL_SIZE - 4}px`;
+                blockEl.style.height = `${block.height * CELL_SIZE - 4}px`;
+                blockEl.style.left = `${block.x * CELL_SIZE + 2}px`;
+                blockEl.style.top = `${block.y * CELL_SIZE + 2}px`;
+                blockEl.textContent = block.name;
+                blockEl.onclick = () => tryMove(index);
+                board.appendChild(blockEl);
+            });
+        }
+
+        function canMove(blockIndex, dx, dy) {
+            const block = blocks[blockIndex];
+            const newX = block.x + dx;
+            const newY = block.y + dy;
+
+            if (newX < 0 || newX + block.width > BOARD_WIDTH) return false;
+            if (newY < 0 || newY + block.height > BOARD_HEIGHT) return false;
+
+            for (let i = 0; i < blocks.length; i++) {
+                if (i === blockIndex) continue;
+                const other = blocks[i];
+                if (newX < other.x + other.width &&
+                    newX + block.width > other.x &&
+                    newY < other.y + other.height &&
+                    newY + block.height > other.y) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        function tryMove(blockIndex) {
+            const block = blocks[blockIndex];
+            let moved = false;
+
+            const directions = [
+                { dx: 0, dy: -1 },
+                { dx: 0, dy: 1 },
+                { dx: -1, dy: 0 },
+                { dx: 1, dy: 0 }
+            ];
+
+            for (const dir of directions) {
+                if (canMove(blockIndex, dir.dx, dir.dy)) {
+                    block.x += dir.dx;
+                    block.y += dir.dy;
+                    moveCount++;
+                    updateMoveCount();
+                    moved = true;
+                    break;
+                }
+            }
+
+            if (moved) {
+                renderBoard();
+                checkWin();
+            }
+        }
+
+        function checkWin() {
+            const caocao = blocks.find(b => b.type === 'caocao');
+            if (caocao.x === 1 && caocao.y === 3) {
+                document.getElementById('finalMoves').textContent = moveCount;
+                document.getElementById('overlay').style.display = 'block';
+                document.getElementById('winMessage').style.display = 'block';
+            }
+        }
+
+        function updateMoveCount() {
+            document.getElementById('moveCount').textContent = moveCount;
+        }
+
+        function resetGame() {
+            document.getElementById('overlay').style.display = 'none';
+            document.getElementById('winMessage').style.display = 'none';
+            initGame();
+        }
+
+        function changeLayout() {
+            currentLayoutIndex = (currentLayoutIndex + 1) % layouts.length;
+            resetGame();
+        }
+
+        initGame();
+    </script>
+</body>
+</html>

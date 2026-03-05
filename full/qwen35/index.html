@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>经典游戏合集</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 50px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            max-width: 800px;
+        }
+
+        h1 {
+            font-size: 48px;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        p {
+            font-size: 18px;
+            color: #666;
+            margin-bottom: 40px;
+        }
+
+        .games {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-top: 30px;
+        }
+
+        .game-card {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            border-radius: 15px;
+            padding: 30px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
+            display: block;
+        }
+
+        .game-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .game-icon {
+            font-size: 64px;
+            margin-bottom: 15px;
+        }
+
+        .game-card h2 {
+            font-size: 28px;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .game-card p {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 0;
+        }
+
+        .huarongdao {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a5a 100%);
+            color: white;
+        }
+
+        .huarongdao h2,
+        .huarongdao p {
+            color: white;
+        }
+
+        .angry-birds {
+            background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
+            color: white;
+        }
+
+        .angry-birds h2,
+        .angry-birds p {
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 经典游戏合集</h1>
+        <p>选择一款游戏开始挑战吧！</p>
+        
+        <div class="games">
+            <a href="huarongdao.html" class="game-card huarongdao">
+                <div class="game-icon">🧩</div>
+                <h2>华容道</h2>
+                <p>经典益智游戏，帮助曹操逃脱</p>
+            </a>
+            
+            <a href="angry-birds.html" class="game-card angry-birds">
+                <div class="game-icon">🐦</div>
+                <h2>愤怒的小鸟</h2>
+                <p>弹弓射击，消灭所有绿猪</p>
+            </a>
+        </div>
+    </div>
+</body>
+</html>

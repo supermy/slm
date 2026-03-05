@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DB20 - 游戏合集</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+        }
+
+        h1 {
+            color: white;
+            font-size: 48px;
+            margin-bottom: 50px;
+            text-shadow: 2px 4px 8px rgba(0,0,0,0.3);
+        }
+
+        .game-container {
+            display: flex;
+            gap: 40px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .game-card {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            width: 300px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .game-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.4);
+        }
+
+        .game-icon {
+            font-size: 80px;
+            margin-bottom: 20px;
+        }
+
+        .game-title {
+            font-size: 28px;
+            color: #667eea;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+
+        .game-description {
+            color: #666;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .play-button {
+            margin-top: 25px;
+            padding: 15px 40px;
+            font-size: 18px;
+            border: none;
+            border-radius: 30px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .play-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        a {
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎮 DB20 游戏合集</h1>
+    
+    <div class="game-container">
+        <a href="huarongdao.html">
+            <div class="game-card">
+                <div class="game-icon">🏯</div>
+                <h2 class="game-title">华容道</h2>
+                <p class="game-description">
+                    经典益智游戏，将曹操移动到底部出口即可获胜
+                </p>
+                <button class="play-button">开始游戏</button>
+            </div>
+        </a>
+
+        <a href="angry-birds.html">
+            <div class="game-card">
+                <div class="game-icon">🐦</div>
+                <h2 class="game-title">愤怒的小鸟</h2>
+                <p class="game-description">
+                    用弹弓发射小鸟，消灭所有绿猪！
+                </p>
+                <button class="play-button">开始游戏</button>
+            </div>
+        </a>
+    </div>
+</body>
+</html>
